@@ -24,6 +24,10 @@ life today
 
 # Show last 7 days
 life week
+
+# Show monthly history
+life history           # current month
+life history 0226      # February 2026 (mmyy format)
 ```
 
 ### Habits
@@ -43,8 +47,11 @@ life habits log 1
 # Log multiple at once
 life habits done 1,2,4
 
-# Check streak
-life habits streak workout
+# Check streaks (visual!)
+life habits streak             # all habits, 7 days
+life habits streak 14          # all habits, 14 days
+life habits streak workout     # single habit, 7 days
+life habits streak workout 30  # single habit, 30 days
 
 # Deactivate/reactivate
 life habits deactivate workout
@@ -75,6 +82,10 @@ life mood 4
 
 # Mood scale:
 # 1 = 😞  2 = 😕  3 = 😐  4 = 🙂  5 = 😄
+
+# View mood history
+life mood history      # last 7 days
+life mood history 30   # last 30 days
 ```
 
 ### Options
@@ -88,6 +99,7 @@ life mood 3 --date 2026-02-01
 # JSON output (for scripting/agents)
 life today --json
 life habits list --json
+life habits streak --json
 life week --json
 ```
 
@@ -102,8 +114,9 @@ life db
 
 ## AI Agent Integration
 
-This CLI is designed to be easily used by AI agents like Nicky:
+See **AGENTS.md** for detailed instructions on how AI agents should use this CLI.
 
+Quick example:
 ```bash
 # Agent checks today's status
 life today --json

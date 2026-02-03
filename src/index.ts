@@ -15,13 +15,15 @@ USAGE:
 
 COMMANDS:
   today                     Show today's habits, mood, and journal
+  week                      Show last 7 days summary
+  history [mmyy]            Show monthly history (default: current month)
   
   habits list               List all active habits
   habits add <name>         Add a new habit (--emoji, --frequency)
   habits log <name|num>     Log a habit as done (--date, --notes)
   habits unlog <name|num>   Remove a habit log (--date)
   habits done <1,2,3>       Log multiple habits by number
-  habits streak <name>      Show streak for a habit
+  habits streak [name] [N]  Show streak visual (default: all habits, 7 days)
   habits deactivate <name>  Deactivate a habit
   habits activate <name>    Reactivate a habit
   
@@ -30,8 +32,8 @@ COMMANDS:
   journal search "query"    Search journal entries
   
   mood <1-5>                Set today's mood (--date)
+  mood history [N]          Show mood history (default: 7 days)
   
-  week                      Show last 7 days summary
   db                        Show database path
 
 OPTIONS:
@@ -43,7 +45,11 @@ EXAMPLES:
   life today
   life habits add "Workout" --emoji 💪
   life habits done 1,3,4
+  life habits streak gym 14      # 14-day streak for gym
+  life habits streak 10          # all habits, 10 days
   life mood 4
+  life mood history 30           # mood for last 30 days
+  life history 0226              # February 2026
   life journal write "Had a productive day"
 `;
 
@@ -52,8 +58,23 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+function formatDateShort(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split("T")[0];
+}
+
+function today(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 function showToday(asJson: boolean, date?: string) {
-  const targetDate = date || new Date().toISOString().split("T")[0];
+  const targetDate = date || today();
   const habitLogs = habits.getLogsForDate(targetDate);
   const entry = journal.getEntry(targetDate);
 
@@ -97,13 +118,14 @@ function showToday(asJson: boolean, date?: string) {
 }
 
 function showWeek(asJson: boolean) {
-  const today = new Date();
+  showDaysHistory(7, asJson);
+}
+
+function showDaysHistory(numDays: number, asJson: boolean) {
   const days: any[] = [];
 
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+  for (let i = numDays - 1; i >= 0; i--) {
+    const dateStr = getDaysAgo(i);
     const habitLogs = habits.getLogsForDate(dateStr);
     const entry = journal.getEntry(dateStr);
 
@@ -124,21 +146,165 @@ function showWeek(asJson: boolean) {
     return;
   }
 
-  // Get all habits for header
   const allHabits = habits.listHabits();
   
-  console.log("\n📊 Last 7 Days\n");
+  console.log(`\n📊 Last ${numDays} Days\n`);
   
-  // Header
   const header = ["Date", ...allHabits.map((h) => h.emoji || h.name.slice(0, 3)), "Mood"];
   console.log(header.join("\t"));
   console.log("-".repeat(50));
 
   for (const day of days) {
-    const dateShort = formatDate(day.date);
+    const dateShort = formatDateShort(day.date);
     const checks = day.habits.map((h: any) => (h.logged ? "✅" : "⬜"));
     const mood = day.mood ? journal.moodToEmoji(day.mood) : "—";
     console.log([dateShort, ...checks, mood].join("\t"));
+  }
+  console.log("");
+}
+
+function showHabitStreak(habitName: string | null, numDays: number, asJson: boolean) {
+  const targetHabits = habitName 
+    ? [habits.getHabit(habitName)].filter(Boolean) as habits.Habit[]
+    : habits.listHabits();
+
+  if (targetHabits.length === 0) {
+    console.error(habitName ? `❌ Habit not found: ${habitName}` : "No habits configured.");
+    process.exit(1);
+  }
+
+  const results: any[] = [];
+
+  for (const habit of targetHabits) {
+    const streak = habits.getStreak(habit.id);
+    const days: { date: string; logged: boolean }[] = [];
+
+    for (let i = numDays - 1; i >= 0; i--) {
+      const dateStr = getDaysAgo(i);
+      const logs = habits.getLogsForDate(dateStr);
+      const habitLog = logs.find((l) => l.habit.id === habit.id);
+      days.push({ date: dateStr, logged: habitLog?.logged || false });
+    }
+
+    results.push({
+      habit: habit.name,
+      emoji: habit.emoji,
+      currentStreak: streak,
+      days,
+    });
+  }
+
+  if (asJson) {
+    console.log(JSON.stringify(results, null, 2));
+    return;
+  }
+
+  console.log(`\n🔥 Habit Streaks (last ${numDays} days)\n`);
+
+  for (const r of results) {
+    const visual = r.days.map((d: any) => (d.logged ? "✅" : "⬜")).join("");
+    const emoji = r.emoji || "•";
+    console.log(`${emoji} ${r.habit}: ${visual} (${r.currentStreak} day streak)`);
+  }
+  console.log("");
+}
+
+function showMoodHistory(numDays: number, asJson: boolean) {
+  const days: { date: string; mood: number | null; emoji: string }[] = [];
+
+  for (let i = numDays - 1; i >= 0; i--) {
+    const dateStr = getDaysAgo(i);
+    const entry = journal.getEntry(dateStr);
+    days.push({
+      date: dateStr,
+      mood: entry?.mood || null,
+      emoji: journal.moodToEmoji(entry?.mood || null) || "—",
+    });
+  }
+
+  if (asJson) {
+    console.log(JSON.stringify(days, null, 2));
+    return;
+  }
+
+  console.log(`\n😊 Mood History (last ${numDays} days)\n`);
+  
+  const visual = days.map((d) => d.emoji).join(" ");
+  console.log(visual);
+  console.log("");
+
+  // Show date range
+  const start = formatDateShort(days[0].date);
+  const end = formatDateShort(days[days.length - 1].date);
+  console.log(`${start} → ${end}`);
+  
+  // Calculate average
+  const moodsWithValues = days.filter((d) => d.mood !== null);
+  if (moodsWithValues.length > 0) {
+    const avg = moodsWithValues.reduce((sum, d) => sum + (d.mood || 0), 0) / moodsWithValues.length;
+    console.log(`Average: ${avg.toFixed(1)} ${journal.moodToEmoji(Math.round(avg))}`);
+  }
+  console.log("");
+}
+
+function showMonthHistory(mmyy: string | null, asJson: boolean) {
+  let year: number, month: number;
+
+  if (mmyy) {
+    // Parse mmyy format (e.g., 0226 = Feb 2026)
+    if (mmyy.length !== 4) {
+      console.error("Format: mmyy (e.g., 0226 for Feb 2026)");
+      process.exit(1);
+    }
+    month = parseInt(mmyy.slice(0, 2), 10);
+    year = 2000 + parseInt(mmyy.slice(2, 4), 10);
+  } else {
+    const now = new Date();
+    year = now.getFullYear();
+    month = now.getMonth() + 1;
+  }
+
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
+
+  const allHabits = habits.listHabits();
+  const days: any[] = [];
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const habitLogs = habits.getLogsForDate(dateStr);
+    const entry = journal.getEntry(dateStr);
+
+    days.push({
+      date: dateStr,
+      day,
+      habits: habitLogs.map((h) => ({
+        name: h.habit.name,
+        emoji: h.habit.emoji,
+        logged: h.logged,
+      })),
+      mood: entry?.mood || null,
+      journal: entry?.content || null,
+    });
+  }
+
+  if (asJson) {
+    console.log(JSON.stringify({ year, month, days }, null, 2));
+    return;
+  }
+
+  const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  console.log(`\n📅 ${monthName}\n`);
+
+  const header = ["Day", ...allHabits.map((h) => h.emoji || h.name.slice(0, 3)), "Mood"];
+  console.log(header.join("\t"));
+  console.log("-".repeat(50));
+
+  for (const d of days) {
+    const checks = d.habits.map((h: any) => (h.logged ? "✅" : "⬜"));
+    const mood = d.mood ? journal.moodToEmoji(d.mood) : "—";
+    console.log([String(d.day).padStart(2), ...checks, mood].join("\t"));
   }
   console.log("");
 }
@@ -178,6 +344,12 @@ async function main() {
     case "week":
       showWeek(asJson);
       break;
+
+    case "history": {
+      const mmyy = positionals[1] || null;
+      showMonthHistory(mmyy, asJson);
+      break;
+    }
 
     case "db":
       console.log(getDbPath());
@@ -275,21 +447,27 @@ async function main() {
         }
 
         case "streak": {
-          const target = positionals[2];
-          if (!target) {
-            console.error("Usage: life habits streak <name>");
-            process.exit(1);
+          // Parse: life habits streak [name] [days]
+          // Could be: streak, streak 10, streak gym, streak gym 10
+          let habitName: string | null = null;
+          let numDays = 7;
+
+          const arg2 = positionals[2];
+          const arg3 = positionals[3];
+
+          if (arg2) {
+            const maybeNum = parseInt(arg2, 10);
+            if (!isNaN(maybeNum)) {
+              numDays = maybeNum;
+            } else {
+              habitName = arg2;
+              if (arg3) {
+                numDays = parseInt(arg3, 10) || 7;
+              }
+            }
           }
-          const streak = habits.getStreak(target);
-          const habit = habits.getHabit(target);
-          if (asJson) {
-            console.log(JSON.stringify({ habit: habit?.name, streak }));
-          } else if (habit) {
-            console.log(`🔥 ${habit.emoji || ""} ${habit.name}: ${streak} day streak`);
-          } else {
-            console.error(`❌ Habit not found: ${target}`);
-            process.exit(1);
-          }
+
+          showHabitStreak(habitName, numDays, asJson);
           break;
         }
 
@@ -411,17 +589,24 @@ async function main() {
       break;
 
     case "mood": {
-      const moodVal = parseInt(positionals[1], 10);
-      if (isNaN(moodVal) || moodVal < 1 || moodVal > 5) {
-        console.error("Usage: life mood <1-5> [--date YYYY-MM-DD]");
-        console.log("  1 = 😞  2 = 😕  3 = 😐  4 = 🙂  5 = 😄");
-        process.exit(1);
-      }
-      const entry = journal.setMood(moodVal, date);
-      if (asJson) {
-        console.log(JSON.stringify(entry, null, 2));
+      // Check if it's "mood history" or "mood <number>"
+      if (subcommand === "history") {
+        const numDays = positionals[2] ? parseInt(positionals[2], 10) : 7;
+        showMoodHistory(numDays, asJson);
       } else {
-        console.log(`✅ Mood set: ${moodVal} ${journal.moodToEmoji(moodVal)}`);
+        const moodVal = parseInt(positionals[1], 10);
+        if (isNaN(moodVal) || moodVal < 1 || moodVal > 5) {
+          console.error("Usage: life mood <1-5> [--date YYYY-MM-DD]");
+          console.error("       life mood history [days]");
+          console.log("  1 = 😞  2 = 😕  3 = 😐  4 = 🙂  5 = 😄");
+          process.exit(1);
+        }
+        const entry = journal.setMood(moodVal, date);
+        if (asJson) {
+          console.log(JSON.stringify(entry, null, 2));
+        } else {
+          console.log(`✅ Mood set: ${moodVal} ${journal.moodToEmoji(moodVal)}`);
+        }
       }
       break;
     }
