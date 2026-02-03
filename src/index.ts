@@ -8,24 +8,24 @@ import * as journal from "./journal";
 initDb();
 
 const HELP = `
-life - CLI for habits and journal tracking
+habits - CLI for habit tracking and journaling
 
 USAGE:
-  life <command> [options]
+  habits <command> [options]
 
 COMMANDS:
   today                     Show today's habits, mood, and journal
   week                      Show last 7 days summary
   history [mmyy]            Show monthly history (default: current month)
   
-  habits list               List all active habits
-  habits add <name>         Add a new habit (--emoji, --frequency)
-  habits log <name|num>     Log a habit as done (--date, --notes)
-  habits unlog <name|num>   Remove a habit log (--date)
-  habits done <1,2,3>       Log multiple habits by number
-  habits streak [name] [N]  Show streak visual (default: all habits, 7 days)
-  habits deactivate <name>  Deactivate a habit
-  habits activate <name>    Reactivate a habit
+  list                      List all active habits
+  add <name>                Add a new habit (--emoji, --frequency)
+  log <name|num>            Log a habit as done (--date, --notes)
+  unlog <name|num>          Remove a habit log (--date)
+  done <1,2,3>              Log multiple habits by number
+  streak [name] [N]         Show streak visual (default: all habits, 7 days)
+  deactivate <name>         Deactivate a habit
+  activate <name>           Reactivate a habit
   
   journal write "text"      Add to today's journal (--date)
   journal read              Read today's journal (--date, --last N)
@@ -42,15 +42,12 @@ OPTIONS:
   --help, -h                Show this help
 
 EXAMPLES:
-  life today
-  life habits add "Workout" --emoji 💪
-  life habits done 1,3,4
-  life habits streak gym 14      # 14-day streak for gym
-  life habits streak 10          # all habits, 10 days
-  life mood 4
-  life mood history 30           # mood for last 30 days
-  life history 0226              # February 2026
-  life journal write "Had a productive day"
+  habits today
+  habits add "Workout" --emoji 💪
+  habits done 1,3,4
+  habits streak gym 14
+  habits mood 4
+  habits journal write "Great day"
 `;
 
 function formatDate(dateStr: string): string {
@@ -233,12 +230,10 @@ function showMoodHistory(numDays: number, asJson: boolean) {
   console.log(visual);
   console.log("");
 
-  // Show date range
   const start = formatDateShort(days[0].date);
   const end = formatDateShort(days[days.length - 1].date);
   console.log(`${start} → ${end}`);
   
-  // Calculate average
   const moodsWithValues = days.filter((d) => d.mood !== null);
   if (moodsWithValues.length > 0) {
     const avg = moodsWithValues.reduce((sum, d) => sum + (d.mood || 0), 0) / moodsWithValues.length;
@@ -251,7 +246,6 @@ function showMonthHistory(mmyy: string | null, asJson: boolean) {
   let year: number, month: number;
 
   if (mmyy) {
-    // Parse mmyy format (e.g., 0226 = Feb 2026)
     if (mmyy.length !== 4) {
       console.error("Format: mmyy (e.g., 0226 for Feb 2026)");
       process.exit(1);
@@ -264,10 +258,7 @@ function showMonthHistory(mmyy: string | null, asJson: boolean) {
     month = now.getMonth() + 1;
   }
 
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
-
   const allHabits = habits.listHabits();
   const days: any[] = [];
 
@@ -355,171 +346,162 @@ async function main() {
       console.log(getDbPath());
       break;
 
-    case "habits":
-      switch (subcommand) {
-        case "list": {
-          const list = habits.listHabits();
-          if (asJson) {
-            console.log(JSON.stringify(list, null, 2));
-          } else {
-            if (list.length === 0) {
-              console.log("No habits configured. Add one with: life habits add <name>");
-            } else {
-              list.forEach((h, i) => {
-                const emoji = h.emoji || "•";
-                console.log(`${i + 1}. ${emoji} ${h.name} (${h.frequency})`);
-              });
-            }
-          }
-          break;
+    // Habit commands (flattened)
+    case "list": {
+      const list = habits.listHabits();
+      if (asJson) {
+        console.log(JSON.stringify(list, null, 2));
+      } else {
+        if (list.length === 0) {
+          console.log("No habits configured. Add one with: habits add <name>");
+        } else {
+          list.forEach((h, i) => {
+            const emoji = h.emoji || "•";
+            console.log(`${i + 1}. ${emoji} ${h.name} (${h.frequency})`);
+          });
         }
-
-        case "add": {
-          const name = positionals[2];
-          if (!name) {
-            console.error("Usage: life habits add <name> [--emoji X] [--frequency daily|weekly]");
-            process.exit(1);
-          }
-          const habit = habits.addHabit(name, values.emoji as string, values.frequency as string);
-          if (asJson) {
-            console.log(JSON.stringify(habit, null, 2));
-          } else {
-            console.log(`✅ Added habit: ${habit.emoji || ""} ${habit.name}`);
-          }
-          break;
-        }
-
-        case "log": {
-          const target = positionals[2];
-          if (!target) {
-            console.error("Usage: life habits log <name|number> [--date YYYY-MM-DD] [--notes text]");
-            process.exit(1);
-          }
-          const success = habits.logHabit(target, date, values.notes as string);
-          if (asJson) {
-            console.log(JSON.stringify({ success, habit: target, date: date || "today" }));
-          } else if (success) {
-            console.log(`✅ Logged: ${target}`);
-          } else {
-            console.error(`❌ Habit not found: ${target}`);
-            process.exit(1);
-          }
-          break;
-        }
-
-        case "unlog": {
-          const target = positionals[2];
-          if (!target) {
-            console.error("Usage: life habits unlog <name|number> [--date YYYY-MM-DD]");
-            process.exit(1);
-          }
-          const success = habits.unlogHabit(target, date);
-          if (asJson) {
-            console.log(JSON.stringify({ success, habit: target }));
-          } else if (success) {
-            console.log(`✅ Unlogged: ${target}`);
-          } else {
-            console.error(`❌ Habit not found: ${target}`);
-            process.exit(1);
-          }
-          break;
-        }
-
-        case "done": {
-          const nums = positionals[2];
-          if (!nums) {
-            console.error("Usage: life habits done <1,2,3>");
-            process.exit(1);
-          }
-          const indices = nums.split(",").map((n) => parseInt(n.trim(), 10)).filter((n) => !isNaN(n));
-          const result = habits.logMultiple(indices, date);
-          if (asJson) {
-            console.log(JSON.stringify(result, null, 2));
-          } else {
-            if (result.logged.length > 0) {
-              console.log(`✅ Logged: ${result.logged.join(", ")}`);
-            }
-            if (result.failed.length > 0) {
-              console.log(`❌ Failed: ${result.failed.join(", ")}`);
-            }
-          }
-          break;
-        }
-
-        case "streak": {
-          // Parse: life habits streak [name] [days]
-          // Could be: streak, streak 10, streak gym, streak gym 10
-          let habitName: string | null = null;
-          let numDays = 7;
-
-          const arg2 = positionals[2];
-          const arg3 = positionals[3];
-
-          if (arg2) {
-            const maybeNum = parseInt(arg2, 10);
-            if (!isNaN(maybeNum)) {
-              numDays = maybeNum;
-            } else {
-              habitName = arg2;
-              if (arg3) {
-                numDays = parseInt(arg3, 10) || 7;
-              }
-            }
-          }
-
-          showHabitStreak(habitName, numDays, asJson);
-          break;
-        }
-
-        case "deactivate": {
-          const target = positionals[2];
-          if (!target) {
-            console.error("Usage: life habits deactivate <name>");
-            process.exit(1);
-          }
-          const success = habits.deactivateHabit(target);
-          if (asJson) {
-            console.log(JSON.stringify({ success, habit: target }));
-          } else if (success) {
-            console.log(`✅ Deactivated: ${target}`);
-          } else {
-            console.error(`❌ Habit not found: ${target}`);
-            process.exit(1);
-          }
-          break;
-        }
-
-        case "activate": {
-          const target = positionals[2];
-          if (!target) {
-            console.error("Usage: life habits activate <name>");
-            process.exit(1);
-          }
-          const success = habits.activateHabit(target);
-          if (asJson) {
-            console.log(JSON.stringify({ success, habit: target }));
-          } else if (success) {
-            console.log(`✅ Activated: ${target}`);
-          } else {
-            console.error(`❌ Habit not found: ${target}`);
-            process.exit(1);
-          }
-          break;
-        }
-
-        default:
-          console.error(`Unknown habits subcommand: ${subcommand}`);
-          console.log("Available: list, add, log, unlog, done, streak, deactivate, activate");
-          process.exit(1);
       }
       break;
+    }
 
+    case "add": {
+      const name = positionals[1];
+      if (!name) {
+        console.error("Usage: habits add <name> [--emoji X] [--frequency daily|weekly]");
+        process.exit(1);
+      }
+      const habit = habits.addHabit(name, values.emoji as string, values.frequency as string);
+      if (asJson) {
+        console.log(JSON.stringify(habit, null, 2));
+      } else {
+        console.log(`✅ Added habit: ${habit.emoji || ""} ${habit.name}`);
+      }
+      break;
+    }
+
+    case "log": {
+      const target = positionals[1];
+      if (!target) {
+        console.error("Usage: habits log <name|number> [--date YYYY-MM-DD] [--notes text]");
+        process.exit(1);
+      }
+      const success = habits.logHabit(target, date, values.notes as string);
+      if (asJson) {
+        console.log(JSON.stringify({ success, habit: target, date: date || "today" }));
+      } else if (success) {
+        console.log(`✅ Logged: ${target}`);
+      } else {
+        console.error(`❌ Habit not found: ${target}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    case "unlog": {
+      const target = positionals[1];
+      if (!target) {
+        console.error("Usage: habits unlog <name|number> [--date YYYY-MM-DD]");
+        process.exit(1);
+      }
+      const success = habits.unlogHabit(target, date);
+      if (asJson) {
+        console.log(JSON.stringify({ success, habit: target }));
+      } else if (success) {
+        console.log(`✅ Unlogged: ${target}`);
+      } else {
+        console.error(`❌ Habit not found: ${target}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    case "done": {
+      const nums = positionals[1];
+      if (!nums) {
+        console.error("Usage: habits done <1,2,3>");
+        process.exit(1);
+      }
+      const indices = nums.split(",").map((n) => parseInt(n.trim(), 10)).filter((n) => !isNaN(n));
+      const result = habits.logMultiple(indices, date);
+      if (asJson) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        if (result.logged.length > 0) {
+          console.log(`✅ Logged: ${result.logged.join(", ")}`);
+        }
+        if (result.failed.length > 0) {
+          console.log(`❌ Failed: ${result.failed.join(", ")}`);
+        }
+      }
+      break;
+    }
+
+    case "streak": {
+      let habitName: string | null = null;
+      let numDays = 7;
+
+      const arg1 = positionals[1];
+      const arg2 = positionals[2];
+
+      if (arg1) {
+        const maybeNum = parseInt(arg1, 10);
+        if (!isNaN(maybeNum)) {
+          numDays = maybeNum;
+        } else {
+          habitName = arg1;
+          if (arg2) {
+            numDays = parseInt(arg2, 10) || 7;
+          }
+        }
+      }
+
+      showHabitStreak(habitName, numDays, asJson);
+      break;
+    }
+
+    case "deactivate": {
+      const target = positionals[1];
+      if (!target) {
+        console.error("Usage: habits deactivate <name>");
+        process.exit(1);
+      }
+      const success = habits.deactivateHabit(target);
+      if (asJson) {
+        console.log(JSON.stringify({ success, habit: target }));
+      } else if (success) {
+        console.log(`✅ Deactivated: ${target}`);
+      } else {
+        console.error(`❌ Habit not found: ${target}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    case "activate": {
+      const target = positionals[1];
+      if (!target) {
+        console.error("Usage: habits activate <name>");
+        process.exit(1);
+      }
+      const success = habits.activateHabit(target);
+      if (asJson) {
+        console.log(JSON.stringify({ success, habit: target }));
+      } else if (success) {
+        console.log(`✅ Activated: ${target}`);
+      } else {
+        console.error(`❌ Habit not found: ${target}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    // Journal commands
     case "journal":
       switch (subcommand) {
         case "write": {
           const content = positionals.slice(2).join(" ");
           if (!content) {
-            console.error("Usage: life journal write <text> [--date YYYY-MM-DD]");
+            console.error("Usage: habits journal write <text> [--date YYYY-MM-DD]");
             process.exit(1);
           }
           const entry = journal.writeJournal(content, date);
@@ -562,7 +544,7 @@ async function main() {
         case "search": {
           const query = positionals.slice(2).join(" ");
           if (!query) {
-            console.error("Usage: life journal search <query>");
+            console.error("Usage: habits journal search <query>");
             process.exit(1);
           }
           const results = journal.searchJournal(query);
@@ -588,16 +570,16 @@ async function main() {
       }
       break;
 
+    // Mood commands
     case "mood": {
-      // Check if it's "mood history" or "mood <number>"
       if (subcommand === "history") {
         const numDays = positionals[2] ? parseInt(positionals[2], 10) : 7;
         showMoodHistory(numDays, asJson);
       } else {
         const moodVal = parseInt(positionals[1], 10);
         if (isNaN(moodVal) || moodVal < 1 || moodVal > 5) {
-          console.error("Usage: life mood <1-5> [--date YYYY-MM-DD]");
-          console.error("       life mood history [days]");
+          console.error("Usage: habits mood <1-5> [--date YYYY-MM-DD]");
+          console.error("       habits mood history [days]");
           console.log("  1 = 😞  2 = 😕  3 = 😐  4 = 🙂  5 = 😄");
           process.exit(1);
         }

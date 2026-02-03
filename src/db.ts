@@ -3,9 +3,9 @@ import { existsSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { homedir } from "os";
 
-// Store data in ~/.life/life.db
-const DATA_DIR = join(homedir(), ".life");
-const DB_PATH = join(DATA_DIR, "life.db");
+// Store data in ~/.habits/habits.db
+const DATA_DIR = join(homedir(), ".habits");
+const DB_PATH = join(DATA_DIR, "habits.db");
 
 // Ensure data directory exists
 if (!existsSync(DATA_DIR)) {

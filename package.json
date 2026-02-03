@@ -1,14 +1,14 @@
 {
-  "name": "life-cli",
+  "name": "habits-cli",
   "version": "0.1.0",
   "description": "CLI for habits and journal tracking with SQLite",
   "type": "module",
   "bin": {
-    "life": "./src/index.ts"
+    "habits": "./src/index.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile dist/life",
+    "build": "bun build src/index.ts --compile --outfile dist/habits",
     "test": "bun test"
   },
   "keywords": ["cli", "habits", "journal", "tracking", "sqlite"],
