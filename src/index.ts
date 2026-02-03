@@ -63,11 +63,11 @@ function formatDateShort(dateStr: string): string {
 function getDaysAgo(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  return d.toISOString().split("T")[0];
+  return d.toISOString().split("T")[0]!;
 }
 
 function today(): string {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0]!;
 }
 
 function showToday(asJson: boolean, date?: string) {
@@ -230,8 +230,8 @@ function showMoodHistory(numDays: number, asJson: boolean) {
   console.log(visual);
   console.log("");
 
-  const start = formatDateShort(days[0].date);
-  const end = formatDateShort(days[days.length - 1].date);
+  const start = formatDateShort(days[0]!.date);
+  const end = formatDateShort(days[days.length - 1]!.date);
   console.log(`${start} → ${end}`);
   
   const moodsWithValues = days.filter((d) => d.mood !== null);
@@ -576,7 +576,7 @@ async function main() {
         const numDays = positionals[2] ? parseInt(positionals[2], 10) : 7;
         showMoodHistory(numDays, asJson);
       } else {
-        const moodVal = parseInt(positionals[1], 10);
+        const moodVal = parseInt(positionals[1] ?? "", 10);
         if (isNaN(moodVal) || moodVal < 1 || moodVal > 5) {
           console.error("Usage: habits mood <1-5> [--date YYYY-MM-DD]");
           console.error("       habits mood history [days]");
