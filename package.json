@@ -24,7 +24,9 @@
     "journal",
     "tracking",
     "sqlite",
-    "productivity"
+    "productivity",
+    "openclaw",
+    "ai-agent"
   ],
   "author": "vigneshrajsb",
   "license": "MIT",
