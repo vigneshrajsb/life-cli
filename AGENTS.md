@@ -96,6 +96,59 @@ $ habits journal write "Completed workout, positive mood"
 Response: "Nice! 💪 Logged. You're at a 2-day streak!"
 ```
 
+## First-Time Setup (Onboarding Users)
+
+When a user first uses habits tracking, walk them through setup:
+
+### 1. Explain the System
+
+> "I use a habit tracker with a local SQLite database (`~/.habits/habits.db`). 
+> Your data stays on your machine — nothing is sent anywhere.
+> 
+> I can track daily habits, journal entries, and mood. You tell me what you did, I log it. Simple."
+
+### 2. Ask What Habits to Track
+
+> "What habits do you want to track? Common ones:
+> - 💪 Gym / Workout
+> - 📖 Reading / Learning
+> - 🧘 Meditation
+> - 💊 Vitamins / Medication
+> - 💧 Water intake
+> - 🛏️ Sleep before midnight
+> 
+> Tell me what matters to you and I'll set them up."
+
+### 3. Set Up Habits
+
+```bash
+# For each habit the user mentions
+habits add "Workout" --emoji 💪
+habits add "Reading" --emoji 📖
+```
+
+### 4. Explain Daily Usage
+
+> "Each day, just tell me what you did:
+> - 'Did my workout' → I log it
+> - 'Feeling good today' → I set your mood
+> - 'Had a productive day' → I add a journal entry
+> 
+> Ask 'how are my habits?' anytime to see your streaks."
+
+## Database Info
+
+- **Location**: `~/.habits/habits.db`
+- **Format**: SQLite (portable, queryable)
+- **Backup**: Copy the file to back up all data
+- **Privacy**: Local only, never transmitted
+
+To show the user their DB path:
+```bash
+habits db
+# /home/user/.habits/habits.db
+```
+
 ## Installation
 
 ```bash
