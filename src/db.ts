@@ -1,14 +1,15 @@
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "fs";
-import { dirname, join } from "path";
+import { join } from "path";
 import { homedir } from "os";
 
-// Store data in ~/.habits/habits.db
-const DATA_DIR = join(homedir(), ".habits");
-const DB_PATH = join(DATA_DIR, "habits.db");
+// Support test database via environment variable
+const isTest = process.env.HABITS_TEST === "1";
+const DATA_DIR = isTest ? "/tmp/habits-test" : join(homedir(), ".habits");
+const DB_PATH = isTest ? ":memory:" : join(DATA_DIR, "habits.db");
 
-// Ensure data directory exists
-if (!existsSync(DATA_DIR)) {
+// Ensure data directory exists (skip for in-memory)
+if (DB_PATH !== ":memory:" && !existsSync(DATA_DIR)) {
   mkdirSync(DATA_DIR, { recursive: true });
 }
 

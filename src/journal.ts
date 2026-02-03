@@ -24,7 +24,7 @@ export function moodToEmoji(mood: number | null): string {
 
 // Get today's date in YYYY-MM-DD format
 function today(): string {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0]!;
 }
 
 export function getEntry(date?: string): JournalEntry | null {

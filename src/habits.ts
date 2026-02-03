@@ -18,7 +18,7 @@ export interface HabitLog {
 
 // Get today's date in YYYY-MM-DD format
 function today(): string {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0]!;
 }
 
 export function addHabit(name: string, emoji?: string, frequency: string = "daily"): Habit {
@@ -89,7 +89,7 @@ export function logMultiple(indices: number[], date?: string): { logged: string[
 
   for (const idx of indices) {
     if (idx >= 1 && idx <= habits.length) {
-      const habit = habits[idx - 1];
+      const habit = habits[idx - 1]!;
       if (logHabit(habit.id, date)) {
         logged.push(habit.name);
       } else {
@@ -116,13 +116,13 @@ export function getStreak(nameOrId: string | number): number {
   currentDate.setHours(0, 0, 0, 0);
 
   // Check if today is logged, if not start from yesterday
-  const todayStr = currentDate.toISOString().split("T")[0];
-  if (logs[0].logged_at !== todayStr) {
+  const todayStr = currentDate.toISOString().split("T")[0]!;
+  if (logs[0]!.logged_at !== todayStr) {
     currentDate.setDate(currentDate.getDate() - 1);
   }
 
   for (const log of logs) {
-    const expectedDate = currentDate.toISOString().split("T")[0];
+    const expectedDate = currentDate.toISOString().split("T")[0]!;
     if (log.logged_at === expectedDate) {
       streak++;
       currentDate.setDate(currentDate.getDate() - 1);

@@ -2,14 +2,21 @@
 
 A simple CLI for tracking habits and journaling, built with Bun and SQLite.
 
-## Installation
+## Install
 
 ```bash
-git clone https://github.com/vigneshrajsb/habits-cli.git
-cd habits-cli
-bun install
-bun link
+npm install -g habits-cli
+# or
+pnpm add -g habits-cli
+# or
+bun add -g habits-cli
+
+# one-shot (no install)
+bunx habits-cli --help
+npx habits-cli --help
 ```
+
+**Requires:** [Bun](https://bun.sh) runtime (`curl -fsSL https://bun.sh/install | bash`)
 
 ## Usage
 
