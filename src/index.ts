@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { parseArgs } from "util";
-import { initDb, getDbPath } from "./db";
+import { initDb, getDbPath, getConfig, updateConfig } from "./db";
 import * as habits from "./habits";
 import * as journal from "./journal";
 
@@ -34,6 +34,9 @@ COMMANDS:
   mood <1-5>                Set today's mood (--date)
   mood history [N]          Show mood history (default: 7 days)
   
+  config                    Show current config
+  config timezone <tz>      Set timezone (e.g., America/Los_Angeles)
+  
   db                        Show database path
 
 OPTIONS:
@@ -48,6 +51,7 @@ EXAMPLES:
   habits streak gym 14
   habits mood 4
   habits journal write "Great day"
+  habits config timezone America/Los_Angeles
 `;
 
 function formatDate(dateStr: string): string {
@@ -60,14 +64,38 @@ function formatDateShort(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Get date in configured timezone
+function getDateInTimezone(offsetDays: number = 0): string {
+  const config = getConfig();
+  const now = new Date();
+  
+  if (offsetDays !== 0) {
+    now.setDate(now.getDate() - offsetDays);
+  }
+  
+  if (config.timezone) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: config.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(now);
+  }
+  
+  // Fallback: use local system time
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split("T")[0]!;
+  return getDateInTimezone(n);
 }
 
 function today(): string {
-  return new Date().toISOString().split("T")[0]!;
+  return getDateInTimezone(0);
 }
 
 function showToday(asJson: boolean, date?: string) {
@@ -345,6 +373,38 @@ async function main() {
     case "db":
       console.log(getDbPath());
       break;
+
+    case "config": {
+      if (subcommand === "timezone") {
+        const tz = positionals[2];
+        if (!tz) {
+          console.error("Usage: habits config timezone <timezone>");
+          console.error("Example: habits config timezone America/Los_Angeles");
+          process.exit(1);
+        }
+        // Validate timezone
+        try {
+          new Intl.DateTimeFormat("en-US", { timeZone: tz });
+        } catch {
+          console.error(`❌ Invalid timezone: ${tz}`);
+          process.exit(1);
+        }
+        updateConfig({ timezone: tz });
+        console.log(`✅ Timezone set: ${tz}`);
+        console.log(`   Today is now: ${today()}`);
+      } else {
+        const config = getConfig();
+        if (asJson) {
+          console.log(JSON.stringify(config, null, 2));
+        } else {
+          console.log("\n⚙️ Config\n");
+          console.log(`Timezone: ${config.timezone || "(system default)"}`);
+          console.log(`Today: ${today()}`);
+          console.log("");
+        }
+      }
+      break;
+    }
 
     // Habit commands (flattened)
     case "list": {

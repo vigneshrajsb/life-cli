@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -7,6 +7,46 @@ import { homedir } from "os";
 const isTest = process.env.HABITS_TEST === "1";
 const DATA_DIR = isTest ? "/tmp/habits-test" : join(homedir(), ".habits");
 const DB_PATH = isTest ? ":memory:" : join(DATA_DIR, "habits.db");
+const CONFIG_PATH = join(DATA_DIR, "config.json");
+
+// Config interface
+export interface Config {
+  timezone?: string; // e.g., "America/Los_Angeles"
+}
+
+// Load config from file
+export function loadConfig(): Config {
+  try {
+    if (existsSync(CONFIG_PATH)) {
+      return JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+    }
+  } catch {
+    // Ignore parse errors, return default
+  }
+  return {};
+}
+
+// Save config to file
+export function saveConfig(config: Config): void {
+  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+}
+
+// Get current config (cached)
+let _config: Config | null = null;
+export function getConfig(): Config {
+  if (_config === null) {
+    _config = loadConfig();
+  }
+  return _config;
+}
+
+// Update config and clear cache
+export function updateConfig(updates: Partial<Config>): Config {
+  const config = { ...loadConfig(), ...updates };
+  saveConfig(config);
+  _config = config;
+  return config;
+}
 
 // Ensure data directory exists (skip for in-memory)
 if (DB_PATH !== ":memory:" && !existsSync(DATA_DIR)) {

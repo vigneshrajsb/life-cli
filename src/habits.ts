@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, getConfig } from "./db";
 
 export interface Habit {
   id: number;
@@ -16,9 +16,28 @@ export interface HabitLog {
   notes: string | null;
 }
 
-// Get today's date in YYYY-MM-DD format
+// Get today's date in YYYY-MM-DD format (uses configured timezone)
 function today(): string {
-  return new Date().toISOString().split("T")[0]!;
+  const config = getConfig();
+  const now = new Date();
+  
+  if (config.timezone) {
+    // Use Intl to get date parts in the configured timezone
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: config.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    // en-CA format gives us YYYY-MM-DD
+    return formatter.format(now);
+  }
+  
+  // Fallback: use local system time (not UTC)
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function addHabit(name: string, emoji?: string, frequency: string = "daily"): Habit {
