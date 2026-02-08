@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, getConfig } from "./db";
 
 export interface JournalEntry {
   id: number;
@@ -22,9 +22,26 @@ export function moodToEmoji(mood: number | null): string {
   return MOOD_EMOJIS[mood] || "";
 }
 
-// Get today's date in YYYY-MM-DD format
+// Get today's date in YYYY-MM-DD format (uses configured timezone)
 function today(): string {
-  return new Date().toISOString().split("T")[0]!;
+  const config = getConfig();
+  const now = new Date();
+  
+  if (config.timezone) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: config.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(now);
+  }
+  
+  // Fallback: use local system time
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function getEntry(date?: string): JournalEntry | null {

@@ -120,6 +120,28 @@ export function logMultiple(indices: number[], date?: string): { logged: string[
   return { logged, failed };
 }
 
+// Helper to get date string N days ago in configured timezone
+function getDateOffset(daysAgo: number): string {
+  const config = getConfig();
+  const now = new Date();
+  now.setDate(now.getDate() - daysAgo);
+  
+  if (config.timezone) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: config.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(now);
+  }
+  
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function getStreak(nameOrId: string | number): number {
   const habit = getHabit(nameOrId);
   if (!habit) return 0;
@@ -131,20 +153,16 @@ export function getStreak(nameOrId: string | number): number {
   if (logs.length === 0) return 0;
 
   let streak = 0;
-  let currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
+  const todayStr = getDateOffset(0);
+  
   // Check if today is logged, if not start from yesterday
-  const todayStr = currentDate.toISOString().split("T")[0]!;
-  if (logs[0]!.logged_at !== todayStr) {
-    currentDate.setDate(currentDate.getDate() - 1);
-  }
+  let daysBack = logs[0]!.logged_at === todayStr ? 0 : 1;
 
   for (const log of logs) {
-    const expectedDate = currentDate.toISOString().split("T")[0]!;
+    const expectedDate = getDateOffset(daysBack);
     if (log.logged_at === expectedDate) {
       streak++;
-      currentDate.setDate(currentDate.getDate() - 1);
+      daysBack++;
     } else if (log.logged_at < expectedDate) {
       break;
     }
