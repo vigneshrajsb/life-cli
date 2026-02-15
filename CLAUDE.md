@@ -2,6 +2,33 @@
 
 Habit tracking and journaling CLI with SQLite backend.
 
+## ⚠️ Data Safety
+
+**Backup before destructive operations:**
+```bash
+cp ~/.habits/habits.db ~/.habits/habits.db.bak
+```
+
+## Release Process
+
+When releasing a new version:
+
+```bash
+# 1. Bump version (creates commit + tag)
+npm version patch|minor|major -m "Release %s - description"
+
+# 2. Push (GitHub Actions publishes to npm)
+git push && git push --tags
+
+# 3. UPDATE GLOBAL INSTALL (don't forget!)
+npm install -g @vigneshrajsb/habits-cli@latest
+
+# 4. Verify
+npm list -g @vigneshrajsb/habits-cli
+```
+
+> ⚠️ Step 3 is critical! Dashboard uses the global `habits` command.
+
 ## For Agents
 
 Read **AGENTS.md** for complete usage.

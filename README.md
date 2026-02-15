@@ -85,6 +85,32 @@ habits db                 # show path
 
 See **AGENTS.md** for detailed agent usage.
 
+## Development
+
+### Release Process
+
+1. **Bump version & tag:**
+   ```bash
+   npm version patch|minor|major -m "Release %s - description"
+   ```
+
+2. **Push to GitHub (triggers npm publish):**
+   ```bash
+   git push && git push --tags
+   ```
+
+3. **Update global install on this machine:**
+   ```bash
+   npm install -g @vigneshrajsb/habits-cli@latest
+   ```
+
+4. **Verify:**
+   ```bash
+   npm list -g @vigneshrajsb/habits-cli
+   ```
+
+> ⚠️ **Don't forget step 3!** The dashboard uses the global `habits` command.
+
 ## License
 
 MIT
