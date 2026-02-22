@@ -55,7 +55,25 @@ export function writeJournal(content: string, date?: string): JournalEntry {
   const existing = getEntry(targetDate);
 
   if (existing) {
-    // Append to existing content
+    // Replace existing content (changed from append to avoid duplicates)
+    db.prepare(
+      "UPDATE journal SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE date = ?"
+    ).run(content, targetDate);
+  } else {
+    db.prepare(
+      "INSERT INTO journal (date, content) VALUES (?, ?)"
+    ).run(targetDate, content);
+  }
+
+  return getEntry(targetDate)!;
+}
+
+// Append to existing journal (for cases where you want to add to, not replace)
+export function appendJournal(content: string, date?: string): JournalEntry {
+  const targetDate = date || today();
+  const existing = getEntry(targetDate);
+
+  if (existing) {
     const newContent = existing.content
       ? `${existing.content}\n\n${content}`
       : content;
